@@ -1,0 +1,331 @@
+<!doctype html>
+<html lang="id">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>LABORATORIUM ELEKTRONIKA DAN INSTRUMENTASI</title>
+  <style>
+    :root{--bg:#f7fafc;--card:#fff;--muted:#6b7280;--accent:#0f172a}
+    body{font-family:Inter, ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial; margin:0; background:var(--bg); color:var(--accent)}
+    .container{max-width:980px;margin:28px auto;padding:16px}
+    header{background:var(--card);padding:18px;border-radius:10px;box-shadow:0 6px 18px rgba(2,6,23,0.06);display:flex;justify-content:space-between;align-items:center}
+    h1{margin:0;font-size:18px}
+    nav button{margin-left:8px;padding:8px 10px;border-radius:8px;border:1px solid #e6edf3;background:#fff;cursor:pointer}
+    main{margin-top:18px}
+    .card{background:var(--card);padding:16px;border-radius:10px;margin-bottom:14px;box-shadow:0 4px 12px rgba(2,6,23,0.04)}
+    .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px}
+    .section-btn{padding:14px;border-radius:8px;border:1px dashed #e6edf3;background:linear-gradient(180deg,#fff,#fbfdff);cursor:pointer;text-align:left}
+    table{width:100%;border-collapse:collapse}
+    th,td{padding:8px;border:1px solid #eef2f6;text-align:left}
+    .muted{color:var(--muted)}
+    .controls{display:flex;gap:8px}
+    .btn{padding:8px 10px;border-radius:8px;border:1px solid #dbe7f3;background:#fff;cursor:pointer}
+    textarea{width:100%;min-height:160px;padding:10px;border-radius:8px;border:1px solid #e6edf3}
+    .small{font-size:13px}
+    footer{margin-top:18px;text-align:center;color:var(--muted)}
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <div>
+        <h1>LABORATORIUM ELEKTRONIKA DAN INSTRUMENTASI</h1>
+        <div class="small muted">UNIVERSITAS HASANUDDIN</div>
+      </div>
+      <nav>
+        <button id="nav-home">Beranda</button>
+        <button id="nav-pengenalan">Pengenalan</button>
+        <button id="nav-info">Informasi Umum</button>
+      </nav>
+    </header>
+
+    <main id="app">
+      <!-- content injected by JS -->
+    </main>
+
+    <footer>&copy; <span id="year"></span> Laboratorium Elektronika dan Instrumentasi</footer>
+  </div>
+
+  <script>
+    // ======= Default data =======
+    const DEFAULT_INFO = `Selamat datang di Laboratorium Elektronika dan Instrumentasi.\n\nDi sini Anda dapat mengubah informasi umum laboratorium secara langsung melalui editor.`;
+
+    const DEFAULT_PARTICIPANTS = {
+      "2021": [
+        { name: "---", nim: "----" },
+        { name: "----", nim: "---" }
+      ],
+      "2022": [
+        { name: "---", nim: "--" },
+        { name: "---", nim: "---" }
+      ],
+      "2023": [
+        { name: "RUTH LEBANG", nim: "H021231005" },
+        { name: "Dandi Hartono", nim: "H021231007" },
+        { name: "Nur Alik Katu", nim: "H021231041" },
+        { name: "Ansar Mubaroq", nim: "H021231043" },
+        { name: "Muh Asnawi", nim: "H021231027" },
+        { name: "Sri Wahyuni SM", nim: "H021231053" },
+        { name: "Juliyati Puspita Sari", nim: "H021231052" },
+        { name: "Nur Amalia", nim: "H021231067" },
+        { name: "Ulva Asriani Nur", nim: "H021231037" },
+        { name: "Febrinesya Alfa Tandi Lion", nim: "H021231063" },
+        { name: "MISWANJA BATU PADANG", nim: "H021231004" },
+        { name: "Taskiyatunnaps", nim: "H021231055" }
+      ]
+    };
+
+    const DEFAULT_THESES = [
+      { name: "--", angkatan: "-", judul: "-" },
+      { name: "--", angkatan: "-", judul: "-" },
+      { name: "-", angkatan: "", judul: "-" }
+    ];
+
+    const STORAGE = {
+      info: 'lab_info_v1',
+      participants: 'lab_participants_v1',
+      theses: 'lab_theses_v1'
+    };
+
+    // ======= Helpers =======
+    function load(key, fallback){
+      const raw = localStorage.getItem(key);
+      return raw ? JSON.parse(raw) : fallback;
+    }
+    function save(key, value){
+      localStorage.setItem(key, JSON.stringify(value));
+    }
+
+    // initialize if not present
+    if(!localStorage.getItem(STORAGE.info)) save(STORAGE.info, DEFAULT_INFO);
+    if(!localStorage.getItem(STORAGE.participants)) save(STORAGE.participants, DEFAULT_PARTICIPANTS);
+    if(!localStorage.getItem(STORAGE.theses)) save(STORAGE.theses, DEFAULT_THESES);
+
+    // ======= App state & rendering =======
+    const app = document.getElementById('app');
+    const yearEl = document.getElementById('year'); yearEl.textContent = new Date().getFullYear();
+
+    function go(page, payload){
+      window.location.hash = page + (payload ? ':'+payload : '');
+      render();
+    }
+
+    document.getElementById('nav-home').addEventListener('click', ()=>go('home'));
+    document.getElementById('nav-pengenalan').addEventListener('click', ()=>go('pengenalan'));
+    document.getElementById('nav-info').addEventListener('click', ()=>go('info'));
+
+    function render(){
+      const hash = (location.hash || '#home').slice(1);
+      const [page, payload] = hash.split(':');
+      if(page === 'home'){ renderHome(); }
+      else if(page === 'pengenalan'){ renderPengenalan(); }
+      else if(page === 'info'){ renderInfo(); }
+      else if(page.startsWith('peserta_')){ renderParticipants(page.split('_')[1]); }
+      else if(page === 'tugas_akhir'){ renderTheses(); }
+      else { renderHome(); }
+    }
+
+    function renderHome(){
+      app.innerHTML = `
+        <div class="card">
+          <h2>Beranda</h2>
+          <p class="muted small">Klik salah satu item untuk melihat isinya</p>
+          <div class="grid" style="margin-top:12px">
+            <div class="section-btn" data-to="pengenalan">Pengenalan lab<br><small class="muted">Klik untuk melihat</small></div>
+            <div class="section-btn" data-to="info">Informasi umum lab (editable)</div>
+            <div class="section-btn" data-to="peserta_2021">Peserta lab 2021</div>
+            <div class="section-btn" data-to="peserta_2022">Peserta lab 2022</div>
+            <div class="section-btn" data-to="peserta_2023">Peserta lab 2023</div>
+            <div class="section-btn" data-to="tugas_akhir">Tugas Akhir Senior</div>
+          </div>
+        </div>
+      `;
+
+      document.querySelectorAll('.section-btn').forEach(el=>{
+        el.addEventListener('click', ()=>{
+          go(el.dataset.to);
+        })
+      });
+    }
+
+    function renderPengenalan(){
+      app.innerHTML = `
+        <div class="card">
+          <h2>Pengenalan lab</h2>
+          <p class="muted small">Isi:</p>
+          <p style="white-space:pre-line;margin-top:10px">lab elins hhhhhh</p>
+          <div style="margin-top:12px"><button class="btn" onclick="go('home')">Kembali</button></div>
+        </div>
+      `;
+    }
+
+    function renderInfo(){
+      const info = load(STORAGE.info, DEFAULT_INFO);
+      app.innerHTML = `
+        <div class="card">
+          <div style="display:flex;justify-content:space-between;align-items:center">
+            <h2>Informasi umum lab</h2>
+            <div class="controls">
+              <button class="btn" id="btn-edit">Edit</button>
+              <button class="btn" id="btn-reset">Reset</button>
+            </div>
+          </div>
+          <div id="view-mode" style="margin-top:12px"><pre style="white-space:pre-wrap">${escapeHtml(info)}</pre></div>
+          <div id="edit-mode" style="display:none;margin-top:12px">
+            <textarea id="info-text">${escapeHtml(info)}</textarea>
+            <div style="margin-top:8px"><button class="btn" id="btn-save">Simpan</button> <button class="btn" id="btn-cancel">Batal</button></div>
+          </div>
+          <div style="margin-top:12px"><button class="btn" onclick="go('home')">Kembali</button></div>
+        </div>
+      `;
+
+      document.getElementById('btn-edit').addEventListener('click', ()=>{
+        document.getElementById('view-mode').style.display='none';
+        document.getElementById('edit-mode').style.display='block';
+      });
+      document.getElementById('btn-cancel').addEventListener('click', ()=>{
+        document.getElementById('view-mode').style.display='block';
+        document.getElementById('edit-mode').style.display='none';
+      });
+      document.getElementById('btn-save').addEventListener('click', ()=>{
+        const v = document.getElementById('info-text').value;
+        save(STORAGE.info, v);
+        alert('Informasi umum disimpan.');
+        renderInfo();
+      });
+      document.getElementById('btn-reset').addEventListener('click', ()=>{
+        if(confirm('Kembalikan ke isi default?')){ save(STORAGE.info, DEFAULT_INFO); renderInfo(); }
+      });
+    }
+
+    function renderParticipants(year){
+      const data = load(STORAGE.participants, DEFAULT_PARTICIPANTS);
+      const list = data[year] || [];
+      app.innerHTML = `
+        <div class="card">
+          <div style="display:flex;justify-content:space-between;align-items:center">
+            <h2>Peserta lab ${year}</h2>
+            <div class="controls">
+              <button class="btn" id="add">Tambah</button>
+              <button class="btn" id="reset">Reset</button>
+            </div>
+          </div>
+
+          <div style="margin-top:12px">
+            <table>
+              <thead><tr><th>No.</th><th>NAMA</th><th>NIM</th><th>Aksi</th></tr></thead>
+              <tbody id="rows">
+                ${list.map((r,i)=>`<tr><td>${i+1}</td><td>${escapeHtml(r.name)}</td><td>${escapeHtml(r.nim)}</td><td><button data-idx="${i}" class="btn del">Hapus</button></td></tr>`).join('')}
+                ${list.length===0?'<tr><td colspan=4 class="muted">Belum ada data.</td></tr>':''}
+              </tbody>
+            </table>
+          </div>
+
+          <div style="margin-top:12px"><button class="btn" onclick="go('home')">Kembali</button></div>
+        </div>
+      `;
+
+      document.getElementById('add').addEventListener('click', ()=>{
+        const name = prompt('Nama peserta:'); if(!name) return;
+        const nim = prompt('NIM:'); if(!nim) return;
+        const d = load(STORAGE.participants, DEFAULT_PARTICIPANTS);
+        d[year] = d[year] || [];
+        d[year].push({name:namedTrim(name), nim:namedTrim(nim)});
+        save(STORAGE.participants, d); renderParticipants(year);
+      });
+
+      document.getElementById('reset').addEventListener('click', ()=>{
+        if(confirm('Reset ke data default untuk tahun '+year+'?')){
+          const d = load(STORAGE.participants, DEFAULT_PARTICIPANTS);
+          d[year] = DEFAULT_PARTICIPANTS[year] || [];
+          save(STORAGE.participants, d);
+          renderParticipants(year);
+        }
+      });
+
+      document.querySelectorAll('.del').forEach(btn=>{
+        btn.addEventListener('click', ()=>{
+          const idx = Number(btn.dataset.idx);
+          if(!confirm('Hapus peserta ini?')) return;
+          const d = load(STORAGE.participants, DEFAULT_PARTICIPANTS);
+          d[year].splice(idx,1);
+          save(STORAGE.participants, d); renderParticipants(year);
+        });
+      });
+    }
+
+    function renderTheses(){
+      const list = load(STORAGE.theses, DEFAULT_THESES);
+      app.innerHTML = `
+        <div class="card">
+          <div style="display:flex;justify-content:space-between;align-items:center">
+            <h2>Tugas Akhir Senior</h2>
+            <div class="controls">
+              <button class="btn" id="add">Tambah</button>
+              <button class="btn" id="reset">Reset</button>
+            </div>
+          </div>
+
+          <div style="margin-top:12px">
+            <table>
+              <thead><tr><th>No.</th><th>NAMA</th><th>ANGKATAN</th><th>TUGAS AKHIR</th><th>Aksi</th></tr></thead>
+              <tbody>
+                ${list.map((t,i)=>`<tr><td>${i+1}</td><td>${escapeHtml(t.name)}</td><td>${escapeHtml(t.angkatan)}</td><td>${escapeHtml(t.judul)}</td><td><button data-idx="${i}" class="btn del">Hapus</button></td></tr>`).join('')}
+                ${list.length===0?'<tr><td colspan=5 class="muted">Belum ada data.</td></tr>':''}
+              </tbody>
+            </table>
+          </div>
+
+          <div style="margin-top:12px"><button class="btn" onclick="go('home')">Kembali</button></div>
+        </div>
+      `;
+
+      document.getElementById('add').addEventListener('click', ()=>{
+        const name = prompt('Nama:'); if(!name) return;
+        const angkatan = prompt('Angkatan:'); if(!angkatan) return;
+        const judul = prompt('Judul Tugas Akhir:'); if(!judul) return;
+        const d = load(STORAGE.theses, DEFAULT_THESES);
+        d.push({name:namedTrim(name), angkatan:namedTrim(angkatan), judul:namedTrim(judul)});
+        save(STORAGE.theses, d); renderTheses();
+      });
+
+      document.getElementById('reset').addEventListener('click', ()=>{
+        if(confirm('Reset tugas akhir ke default?')){ save(STORAGE.theses, DEFAULT_THESES); renderTheses(); }
+      });
+
+      document.querySelectorAll('.del').forEach(btn=>{
+        btn.addEventListener('click', ()=>{
+          const idx = Number(btn.dataset.idx);
+          if(!confirm('Hapus entri ini?')) return;
+          const d = load(STORAGE.theses, DEFAULT_THESES);
+          d.splice(idx,1); save(STORAGE.theses, d); renderTheses();
+        });
+      });
+    }
+
+    // small utilities
+    function escapeHtml(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+    function namedTrim(s){ return String(s).trim(); }
+
+    // react to hash changes
+    window.addEventListener('hashchange', render);
+
+    // initial render
+    render();
+
+    // expose go to inline onclicks
+    window.go = function(p){ location.hash = p; };
+  </script>
+
+  <!--
+    PETUNJUK SINGKAT UNTUK UPLOAD KE GITHUB:
+    1. Simpan file ini sebagai `index.html` di folder lokal.
+    2. Buat repo baru di GitHub (mis. lab-elins) dan push file `index.html`.
+    3. Di GitHub: Settings -> Pages -> Source: pilih branch `main` dan folder `/ (root)` lalu Save.
+    4. Tunggu beberapa menit, lalu buka URL GitHub Pages yang diberikan.
+
+    Catatan: Situs ini menyimpan data (informasi umum, peserta, tugas akhir) di browser pengguna (localStorage).
+    Jika ingin penyimpanan pusat (server), perlu backend atau Google Sheets / Firebase.
+  -->
+</body>
+</html>
